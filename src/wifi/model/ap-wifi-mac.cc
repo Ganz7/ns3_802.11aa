@@ -261,10 +261,11 @@ ApWifiMac::ForwardDown (Ptr<const Packet> packet, Mac48Address from,
     {
       //Sanity check that the TID is valid
       NS_ASSERT (tid < 8);
-      if (m_aaSupported == false || tid <= 3 || (m_edca[QosUtilsMapTidToAc (tid)]->GetEdcaQueue ()->IsEmpty() && !m_edca[QosUtilsMapTidToAc (tid)]->GetBaManager ()->HasPackets ())) {
+      if (m_aaSupported == false || tid <= 3 /*|| (m_edca[QosUtilsMapTidToAc (tid)]->GetEdcaQueue ()->IsEmpty() && !m_edca[QosUtilsMapTidToAc (tid)]->GetBaManager ()->HasPackets ())*/) {
         m_edca[QosUtilsMapTidToAc (tid)]->Queue (packet, hdr);
       } else {
         m_aa[tid]->Enqueue (packet, hdr);
+        m_edca[QosUtilsMapTidToAc (tid)]->StartAccessIfNeeded ();
       }
     }
   else
@@ -443,10 +444,11 @@ ApWifiMac::SendProbeResp (Mac48Address to)
       //Sanity check that the TID is valid
       uint8_t tid = hdr.GetQosTid();
       NS_ASSERT (tid < 8);
-      if (m_aaSupported == false || tid <= 3 || (m_edca[QosUtilsMapTidToAc (tid)]->GetEdcaQueue ()->IsEmpty() && !m_edca[QosUtilsMapTidToAc (tid)]->GetBaManager ()->HasPackets ())) {
+      if (m_aaSupported == false || tid <= 3 /*|| (m_edca[QosUtilsMapTidToAc (tid)]->GetEdcaQueue ()->IsEmpty() && !m_edca[QosUtilsMapTidToAc (tid)]->GetBaManager ()->HasPackets ())*/) {
         m_edca[QosUtilsMapTidToAc (tid)]->Queue (packet, hdr);
       } else {
         m_aa[tid]->Enqueue (packet, hdr);
+        m_edca[QosUtilsMapTidToAc (tid)]->StartAccessIfNeeded ();
       }
     }
   else
@@ -500,10 +502,11 @@ ApWifiMac::SendAssocResp (Mac48Address to, bool success)
       //Sanity check that the TID is valid
       uint8_t tid = hdr.GetQosTid();
       NS_ASSERT (tid < 8);
-      if (m_aaSupported == false || tid <= 3 || (m_edca[QosUtilsMapTidToAc (tid)]->GetEdcaQueue ()->IsEmpty() && !m_edca[QosUtilsMapTidToAc (tid)]->GetBaManager ()->HasPackets ())) {
+      if (m_aaSupported == false || tid <= 3 /*|| (m_edca[QosUtilsMapTidToAc (tid)]->GetEdcaQueue ()->IsEmpty() && !m_edca[QosUtilsMapTidToAc (tid)]->GetBaManager ()->HasPackets ())*/) {
         m_edca[QosUtilsMapTidToAc (tid)]->Queue (packet, hdr);
       } else {
         m_aa[tid]->Enqueue (packet, hdr);
+        m_edca[QosUtilsMapTidToAc (tid)]->StartAccessIfNeeded ();
       }
     }
   else

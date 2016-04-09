@@ -70,7 +70,6 @@ ObjectFactory::Set (std::string name, const AttributeValue &value)
     }
   
   struct TypeId::AttributeInformation info;
-  std::cout << name << std::endl;
   if (!m_tid.LookupAttributeByName (name, &info))
     {
       NS_FATAL_ERROR ("Invalid attribute set (" << name << ") on " << m_tid.GetName ());

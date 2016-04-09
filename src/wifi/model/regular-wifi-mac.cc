@@ -75,14 +75,7 @@ RegularWifiMac::RegularWifiMac ()
   SetupAAQueue (4);
 
   if (m_aaSupported) {
-    m_edca[AC_VO]->SetAASupported(m_aaSupported);
-    m_edca[AC_VI]->SetAASupported(m_aaSupported);
-    m_edca[AC_VO]->SetPrimaryQueue(GetAAQueue(6));
-    m_edca[AC_VO]->SetAlternateQueue(GetAAQueue(7));
-    m_edca[AC_VO]->SetProbAlternate(0.4);
-    m_edca[AC_VI]->SetPrimaryQueue(GetAAQueue(5));
-    m_edca[AC_VI]->SetAlternateQueue(GetAAQueue(4));
-    m_edca[AC_VI]->SetProbAlternate(0.4);
+    SetupAA();
   }
 }
 
@@ -306,7 +299,26 @@ RegularWifiMac::SetAASupported (bool enable)
   NS_LOG_FUNCTION (this);
   m_qosSupported = enable;
   m_aaSupported = enable;
+  if (m_aaSupported) {
+    SetupAA ();
+  }
 }
+
+void
+RegularWifiMac::SetupAA ()
+{
+  NS_LOG_FUNCTION (this);
+
+  m_edca[AC_VO]->SetAASupported(m_aaSupported);
+  m_edca[AC_VI]->SetAASupported(m_aaSupported);
+  m_edca[AC_VO]->SetPrimaryQueue(GetAAQueue(6));
+  m_edca[AC_VO]->SetAlternateQueue(GetAAQueue(7));
+  m_edca[AC_VO]->SetProbAlternate(0.4);
+  m_edca[AC_VI]->SetPrimaryQueue(GetAAQueue(5));
+  m_edca[AC_VI]->SetAlternateQueue(GetAAQueue(4));
+  m_edca[AC_VI]->SetProbAlternate(0.4);
+}
+
 
 bool
 RegularWifiMac::GetAASupported () const

@@ -204,10 +204,12 @@ StaWifiMac::SendProbeRequest (void)
       //Sanity check that the TID is valid
       uint8_t tid = hdr.GetQosTid();
       NS_ASSERT (tid < 8);
-      if (m_aaSupported == false || tid <= 3 || (m_edca[QosUtilsMapTidToAc (tid)]->GetEdcaQueue ()->IsEmpty() && !m_edca[QosUtilsMapTidToAc (tid)]->GetBaManager ()->HasPackets ())) {
+      if (m_aaSupported == false || tid <= 3 /*|| (m_edca[QosUtilsMapTidToAc (tid)]->GetEdcaQueue ()->IsEmpty() && !m_edca[QosUtilsMapTidToAc (tid)]->GetBaManager ()->HasPackets ())*/) {
         m_edca[QosUtilsMapTidToAc (tid)]->Queue (packet, hdr);
       } else {
+        //std::cout << "use aa queue, tid " << unsigned(tid) << std::endl;
         m_aa[tid]->Enqueue (packet, hdr);
+        m_edca[QosUtilsMapTidToAc (tid)]->StartAccessIfNeeded ();
       }
     }
   else
@@ -258,10 +260,12 @@ StaWifiMac::SendAssociationRequest (void)
       //Sanity check that the TID is valid
       uint8_t tid = hdr.GetQosTid();
       NS_ASSERT (tid < 8);
-      if (m_aaSupported == false || tid <= 3 || (m_edca[QosUtilsMapTidToAc (tid)]->GetEdcaQueue ()->IsEmpty() && !m_edca[QosUtilsMapTidToAc (tid)]->GetBaManager ()->HasPackets ())) {
+      if (m_aaSupported == false || tid <= 3 /*|| (m_edca[QosUtilsMapTidToAc (tid)]->GetEdcaQueue ()->IsEmpty() && !m_edca[QosUtilsMapTidToAc (tid)]->GetBaManager ()->HasPackets ())*/) {
         m_edca[QosUtilsMapTidToAc (tid)]->Queue (packet, hdr);
       } else {
+        //std::cout << "use aa queue, tid " << unsigned(tid) << std::endl;
         m_aa[tid]->Enqueue (packet, hdr);
+        m_edca[QosUtilsMapTidToAc (tid)]->StartAccessIfNeeded ();
       }
     }
   else
@@ -443,10 +447,13 @@ StaWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
     {
       //Sanity check that the TID is valid
       NS_ASSERT (tid < 8);
-      if (m_aaSupported == false || tid <= 3 || (m_edca[QosUtilsMapTidToAc (tid)]->GetEdcaQueue ()->IsEmpty() && !m_edca[QosUtilsMapTidToAc (tid)]->GetBaManager ()->HasPackets ())) {
+      //std::cout << "tid: " << unsigned(tid) << std::endl;
+      if (m_aaSupported == false || tid <= 3 /*|| (m_edca[QosUtilsMapTidToAc (tid)]->GetEdcaQueue ()->IsEmpty() && !m_edca[QosUtilsMapTidToAc (tid)]->GetBaManager ()->HasPackets ())*/) {
         m_edca[QosUtilsMapTidToAc (tid)]->Queue (packet, hdr);
       } else {
+        //std::cout << "use aa queue, tid " << unsigned(tid) << std::endl;
         m_aa[tid]->Enqueue (packet, hdr);
+        m_edca[QosUtilsMapTidToAc (tid)]->StartAccessIfNeeded ();
       }
     }
   else

@@ -511,38 +511,6 @@ EdcaTxopN::SetProbAlternate (double prob)
 }
 
 void
-EdcaTxopN::DequeueFromAAToEDCA ()
-{
-  NS_LOG_FUNCTION (this);
-  WifiMacHeader currentHdr;
-  Time currentPacketTimestamp;
-  Ptr<const Packet> packet;
-  if(!p_queue->PeekFirstAvailable (&currentHdr, currentPacketTimestamp, m_qosBlockedDestinations)
-     && a_queue->PeekFirstAvailable (&currentHdr, currentPacketTimestamp, m_qosBlockedDestinations)) {
-    packet = p_queue->DequeueFirstAvailable (&currentHdr, currentPacketTimestamp, m_qosBlockedDestinations);
-    m_queue->Enqueue (packet, currentHdr);
-  } else if (p_queue->PeekFirstAvailable (&currentHdr, currentPacketTimestamp, m_qosBlockedDestinations)
-     && !a_queue->PeekFirstAvailable (&currentHdr, currentPacketTimestamp, m_qosBlockedDestinations)) {
-    packet = a_queue->DequeueFirstAvailable (&currentHdr, currentPacketTimestamp, m_qosBlockedDestinations);
-    m_queue->Enqueue (packet, currentHdr);
-  } else if (!p_queue->PeekFirstAvailable (&currentHdr, currentPacketTimestamp, m_qosBlockedDestinations)
-     && !a_queue->PeekFirstAvailable (&currentHdr, currentPacketTimestamp, m_qosBlockedDestinations)) {
-    Ptr<UniformRandomVariable> rnd = CreateObject<UniformRandomVariable> ();
-    double min = 0;
-    double max = 1;
-    rnd->SetAttribute ("Max", DoubleValue (max));
-    rnd->SetAttribute ("Min", DoubleValue (min));
-    if (rnd->GetValue() >= m_prob_alternate) {
-      packet = p_queue->DequeueFirstAvailable (&currentHdr, currentPacketTimestamp, m_qosBlockedDestinations);
-      m_queue->Enqueue (packet, currentHdr);
-    } else {
-      packet = a_queue->DequeueFirstAvailable (&currentHdr, currentPacketTimestamp, m_qosBlockedDestinations);
-      m_queue->Enqueue (packet, currentHdr);
-    }
-  }
-}
-
-void
 EdcaTxopN::NotifyAccessGranted (void)
 {
   NS_LOG_FUNCTION (this);
@@ -591,9 +559,6 @@ EdcaTxopN::NotifyAccessGranted (void)
             {
               VerifyBlockAck ();
             }
-          if (m_aaSupported) {
-            DequeueFromAAToEDCA();
-          }
         }
     }
   MacLowTransmissionParameters params;
@@ -1049,15 +1014,57 @@ EdcaTxopN::RestartAccessIfNeeded (void)
 }
 
 void
+EdcaTxopN::DequeueFromAAToEDCA ()
+{
+  NS_LOG_FUNCTION (this);
+  WifiMacHeader currentHdr;
+  Ptr<const Packet> packet;
+  //std::cout << "primary queue size: " << p_queue->GetSize() << " alternate queue size: " << a_queue->GetSize() << std::endl;
+  if(p_queue->GetSize() !=0 && a_queue->GetSize() == 0) {
+    packet = p_queue->Dequeue (&currentHdr);
+    m_queue->Enqueue (packet, currentHdr);
+    //std::cout << "alternate queue is empty, dequeue up: " << unsigned(currentHdr.GetQosTid()) << std::endl;
+  } else if (p_queue->GetSize() == 0 && a_queue->GetSize() != 0) {
+    packet = a_queue->Dequeue (&currentHdr);
+    m_queue->Enqueue (packet, currentHdr);
+    //std::cout << "primary queue is empty, dequeue up: " << unsigned(currentHdr.GetQosTid()) << std::endl;
+  } else if (p_queue->GetSize() != 0 && a_queue->GetSize() != 0) {
+    Ptr<UniformRandomVariable> rnd = CreateObject<UniformRandomVariable> ();
+    double min = 0;
+    double max = 1;
+    rnd->SetAttribute ("Max", DoubleValue (max));
+    rnd->SetAttribute ("Min", DoubleValue (min));
+    double rand_variable = rnd->GetValue();
+    //std::cout << "rand: " << rand_variable << std::endl;
+    if (rand_variable >= m_prob_alternate) {
+      packet = p_queue->Dequeue (&currentHdr);
+      m_queue->Enqueue (packet, currentHdr);
+    } else {
+      packet = a_queue->Dequeue (&currentHdr);
+      m_queue->Enqueue (packet, currentHdr);
+    }
+    //std::cout << "both queue are not empty, dequeue up: " << unsigned(currentHdr.GetQosTid())  << std::endl;
+  } else {
+    //std::cout << "both queue are empty"  << std::endl;
+  }
+}
+
+void
 EdcaTxopN::StartAccessIfNeeded (void)
 {
   NS_LOG_FUNCTION (this);
+
+  if (m_currentPacket == 0 && m_queue->IsEmpty () && !m_baManager->HasPackets () && m_aaSupported) {
+    DequeueFromAAToEDCA();
+  }
+
   if (m_currentPacket == 0
       && (!m_queue->IsEmpty () || m_baManager->HasPackets ())
       && !m_dcf->IsAccessRequested ())
     {
       m_manager->RequestAccess (m_dcf);
     }
+
 }
 
 bool

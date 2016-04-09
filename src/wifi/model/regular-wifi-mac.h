@@ -429,6 +429,8 @@ protected:
 
   void SetAASupported (bool enable);
 
+  void SetupAA ();
+
   bool GetAASupported () const;
 
   /**

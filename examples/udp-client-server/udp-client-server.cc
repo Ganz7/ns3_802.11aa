@@ -120,11 +120,5 @@ main (int argc, char *argv[])
   NS_LOG_INFO ("Run Simulation.");
   Simulator::Run ();
   Simulator::Destroy ();
-
-  uint32_t totalPacketsThrough = DynamicCast<UdpServer> (apps.Get (0))->GetReceived ();
-  std::cout << "Number of packets: " << totalPacketsThrough;
-  double throughput = totalPacketsThrough * 1440 * 8 / (10 * 1000000.0); //Mbit/s
-  std::cout << "Throughput : " << throughput;
-
   NS_LOG_INFO ("Done.");
 }
