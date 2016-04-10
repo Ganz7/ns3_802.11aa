@@ -472,6 +472,7 @@ public:
   void SetAlternateQueue (Ptr<WifiMacQueue> queue);
   void SetProbAlternate(double prob);
   void DequeueFromAAToEDCA();
+  uint16_t GetTxDrop(uint8_t tid);
 
 private:
   void DoInitialize ();
@@ -573,6 +574,7 @@ private:
   Ptr<WifiMacQueue> p_queue;
   Ptr<WifiMacQueue> a_queue;
   double m_prob_alternate;
+  uint16_t m_txFailed[8];
 };
 
 } //namespace ns3

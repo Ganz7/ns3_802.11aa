@@ -237,6 +237,7 @@ public:
   virtual void SetCompressedBlockAckTimeout (Time blockAckTimeout);
   virtual Time GetCompressedBlockAckTimeout (void) const;
 
+  uint16_t GetTxDrop(uint8_t tid);
 
 protected:
   virtual void DoInitialize ();
@@ -446,6 +447,7 @@ protected:
     * however.
     */
   bool m_htSupported;
+
 
   /**
    * Enable or disable HT support for the device.

@@ -319,6 +319,12 @@ RegularWifiMac::SetupAA ()
   m_edca[AC_VI]->SetProbAlternate(0.4);
 }
 
+uint16_t
+RegularWifiMac::GetTxDrop(uint8_t tid) {
+  NS_LOG_FUNCTION (this);
+  NS_ASSERT(tid <= 7);
+  return m_edca[AC_VO]->GetTxDrop(tid) + m_edca[AC_VI]->GetTxDrop(tid) + m_edca[AC_BE]->GetTxDrop(tid) + m_edca[AC_BK]->GetTxDrop(tid);
+}
 
 bool
 RegularWifiMac::GetAASupported () const

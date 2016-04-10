@@ -277,11 +277,17 @@ EdcaTxopN::EdcaTxopN ()
   m_baManager->SetMaxPacketDelay (m_queue->GetMaxDelay ());
   m_baManager->SetTxOkCallback (MakeCallback (&EdcaTxopN::BaTxOk, this));
   m_baManager->SetTxFailedCallback (MakeCallback (&EdcaTxopN::BaTxFailed, this));
+  for (int i = 0; i < 8; i++) {
+    m_txFailed[i] = 0;
+  }
 }
 
 EdcaTxopN::~EdcaTxopN ()
 {
-  NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION (this);/*
+  for (int i = 0; i < 8; i++) {
+    std::cout << "up: " << i << " txdrop:" << m_txFailed[i] << std::endl;
+  }*/
 }
 
 void
@@ -854,6 +860,13 @@ EdcaTxopN::GotAck (double snr, WifiMode txMode)
     }
 }
 
+uint16_t
+EdcaTxopN::GetTxDrop(uint8_t tid) {
+  NS_LOG_FUNCTION (this);
+  NS_ASSERT(tid <= 7);
+  return m_txFailed[tid];
+}
+
 void
 EdcaTxopN::MissedAck (void)
 {
@@ -862,6 +875,7 @@ EdcaTxopN::MissedAck (void)
   if (!NeedDataRetransmission ())
     {
       NS_LOG_DEBUG ("Ack Fail");
+      m_txFailed[m_currentHdr.GetQosTid ()]++;
       m_stationManager->ReportFinalDataFailed (m_currentHdr.GetAddr1 (), &m_currentHdr);
       bool resetCurrentPacket = true;
       if (!m_txFailedCallback.IsNull ())
