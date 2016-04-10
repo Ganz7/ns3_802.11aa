@@ -17,7 +17,7 @@
  * Author(s): Ganesh Kumar, Yijing Zheng
  * 
  * Network Topology with an Access Point and multiple stations
- *  
+ * 
 */
 
 #include "ns3/core-module.h"
@@ -40,7 +40,8 @@ n3    n2    n1     AP
 
 Ptr<PacketSink> sink[6];                         /* Pointer to the packet sink application */
 
-double simulation_time = 10.0;
+double simulation_time = 30.0;
+double packet_size = 1000 - 28; // minus ip header and udp header
 
 NS_LOG_COMPONENT_DEFINE ("Simple AP + Stations");
 
@@ -48,19 +49,9 @@ int
 main (int argc, char *argv[])
 {
   int nWifi = 3;
-  bool tracing = false;
 
+  SeedManager::SetSeed(time(0));
 
-  std::cout << "simulation code." << std::endl;
-
-  // Check for valid number of wifi nodes
-  // 250 should be enough, otherwise IP addresses 
-  // soon become an issue
-  if (nWifi > 250)
-    {
-      std::cout << "Too many wifi nodes, no more than 250." << std::endl;
-      return 1;
-    }
 
   NodeContainer wifiStaNodes;
   wifiStaNodes.Create (nWifi);
@@ -68,17 +59,22 @@ main (int argc, char *argv[])
   NodeContainer wifiApNode;
   wifiApNode.Create(1);
 
-  YansWifiChannelHelper channel = YansWifiChannelHelper::Default ();
+  YansWifiChannelHelper channel;
+  channel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+  channel.AddPropagationLoss ("ns3::LogDistancePropagationLossModel",
+                                "Exponent", DoubleValue (3.0),
+                                "ReferenceLoss", DoubleValue (40.0459));
+
   YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
   phy.SetChannel (channel.Create ());
 
-  WifiHelper wifi = WifiHelper::Default ();
-  wifi.SetRemoteStationManager ("ns3::AarfWifiManager");
+  WifiHelper wifi;
+  wifi.SetStandard(WIFI_PHY_STANDARD_80211b);
+  wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
+                                "DataMode", StringValue("DsssRate5_5Mbps"),
+                                "ControlMode", StringValue("DsssRate1Mbps"));
 
-  //NqosWifiMacHelper mac = NqosWifiMacHelper::Default ();
   QosWifiMacHelper mac = QosWifiMacHelper::Default ();
-
-  //ApWifiMac.SetStandard(WIFI_PHY_STANDARD_80211g); ??
 
   Ssid ssid = Ssid ("ns-3-ssid");
   mac.SetType ("ns3::StaWifiMac",
@@ -96,48 +92,34 @@ main (int argc, char *argv[])
 
   MobilityHelper mobility;
 
-  mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-                                 "MinX", DoubleValue (0.0),
-                                 "MinY", DoubleValue (0.0),
-                                 "DeltaX", DoubleValue (10.0),
-                                 "DeltaY", DoubleValue (10.0),
-                                 "GridWidth", UintegerValue (3));
-                                 //"LayoutType", StringValue ("RowFirst"));
-
-  //mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
-   //                          "Bounds", RectangleValue (Rectangle (-50, 50, -50, 50)));
-  //Vector3D position = new Vector3D(0.0, 0.0, 0.0);
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (wifiStaNodes);
 
   /* Place all the nodes in a circle around the center*/
-  int wifiStaNodesCount = 3;
   double phi = 0.0;
-  double radius = 10;
+  double radius = 0.125;
   int centerX = 0;
   int centerY = 0;
   int centerZ = 0;
   for (NodeContainer::Iterator j = wifiStaNodes.Begin (); 
     j != wifiStaNodes.End (); 
-    j++, phi += (2*3.14)/wifiStaNodesCount)
+    j++, phi += (2*3.14)/nWifi)
   {
     Ptr<Node> object = *j;
     Ptr<MobilityModel> position = object->GetObject<MobilityModel> ();
 
     Vector pos2;
-    //std::cout << "Phi: " << phi << std::endl;
     pos2.x = radius * cos(phi) + centerX;
     pos2.y = radius * sin(phi) + centerY;
     pos2.z = 0;
     position->SetPosition(pos2);
   
-    //Vector pos = position->GetPosition ();
-    //std::cout << "x=" << pos.x << ", y=" << pos.y << ", z=" << pos.z << std::endl;
   }
 
   /* Set the AP Node at the center of this circle*/
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (wifiApNode); 
+
   Ptr<Node> APNodeObj = wifiApNode.Get(0);
   Ptr<MobilityModel> position = APNodeObj->GetObject<MobilityModel> ();
   Vector center;
@@ -176,7 +158,7 @@ main (int argc, char *argv[])
       onOffHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=100]"));
       onOffHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
       onOffHelper.SetAttribute ("DataRate",StringValue ("10Mbps"));
-      onOffHelper.SetAttribute ("PacketSize", UintegerValue (1024));
+      onOffHelper.SetAttribute ("PacketSize", UintegerValue (packet_size));
       onOffHelper.SetAttribute ("QosTid", UintegerValue (j + 2));
 
       ApplicationContainer source;
@@ -191,19 +173,21 @@ main (int argc, char *argv[])
 
   Simulator::Stop (Seconds (simulation_time + 1));
 
-  if (tracing == true)
-    {
-      //pointToPoint.EnablePcapAll ("third");
-      phy.EnablePcap ("third", apDevices.Get (0));
-    }
-
   Simulator::Run ();
-  Simulator::Destroy ();
 
   for (int i = 0; i < 6; i++) {
-    double th = sink[i]->GetTotalRx() * (double) 8/(1e6 * simulation_time);
-    std::cout << "up: " << i + 2 << "\t throughput: " << th << " Mbit/s" << std::endl;
+    double th = sink[i]->GetTotalRx() * (double) 8/(5.5 * 1e6 * simulation_time);
+    uint16_t drop = 0;
+    for (int j = 0; j < nWifi; j++) {
+      Ptr<WifiNetDevice> wifiNetDevice = StaticCast<WifiNetDevice> (wifiStaNodes.Get(j)->GetDevice(0));
+      Ptr<RegularWifiMac> wifiMac = StaticCast<RegularWifiMac> (wifiNetDevice->GetMac());
+      drop += wifiMac->GetTxDrop(i);
+    }
+    double total_drop = drop;
+    std::cout << "up: " << i + 2 << "\tthroughput: " << th << "\tdrop_ratio: " << total_drop/(sink[i]->GetTotalRx()/packet_size + total_drop) << "\tdelay:" << simulation_time/(sink[i]->GetTotalRx()/packet_size + total_drop) << std::endl;
   }
+
+  Simulator::Destroy ();
 
   return 0;
 }
