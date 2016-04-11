@@ -48,7 +48,17 @@ NS_LOG_COMPONENT_DEFINE ("Simple AP + Stations");
 int 
 main (int argc, char *argv[])
 {
-  int nWifi = 3;
+
+  int nWifi = 3; // number of STA
+  bool type = false; // false for Poisson, true for on/off
+  double rate = 1; // arrival rate for Poisson, equivalent arrival rate for on/off
+  double duration = 1; // on/off cycle duration
+  CommandLine cmd;
+  cmd.AddValue("nWifi", "Number of STA", nWifi);
+  cmd.AddValue("type", "traffic type, false for Poisson, true for on/off", type);
+  cmd.AddValue("rate", "arrival rate for Poisson, equivalent arrival rate for on/off", rate);
+  cmd.AddValue("duration", "on/off cycle duration", duration);
+  cmd.Parse(argc, argv);
 
   SeedManager::SetSeed(time(0));
 
@@ -155,9 +165,24 @@ main (int argc, char *argv[])
       uint16_t sinkPort = 50000 + j;
       Address sinkAddress (InetSocketAddress (apInterface.GetAddress (0), sinkPort));
       OnOffHelper onOffHelper ("ns3::UdpSocketFactory", sinkAddress);
-      onOffHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=100]"));
-      onOffHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
-      onOffHelper.SetAttribute ("DataRate",StringValue ("10Mbps"));
+      std::ostringstream sstream[2];
+      if (type == false) {
+        sstream[0] << packet_size*8.0/(5.5*1e6);
+        std::string ontime = "ns3::ConstantRandomVariable[Constant=" + sstream[0].str() + "]";
+        onOffHelper.SetAttribute ("OnTime", StringValue (ontime));
+        sstream[1] << 1.0/rate;
+        std::string offtime = "ns3::ExponentialRandomVariable[Mean=" + sstream[1].str() + "|Bound=30]";
+        onOffHelper.SetAttribute ("OffTime", StringValue (offtime));
+        onOffHelper.SetAttribute ("DataRate",StringValue ("5.5Mbps"));
+      } else {
+        sstream[0] << duration/2.0;
+        std::string ontime = "ns3::ConstantRandomVariable[Constant=" + sstream[0].str() + "]";
+        onOffHelper.SetAttribute ("OnTime", StringValue (ontime));
+        onOffHelper.SetAttribute ("OffTime", StringValue (ontime));
+        sstream[1] << packet_size*8.0*rate*2.0/1e6;
+        std::string datarate = sstream[1].str() + "Mbps";
+        onOffHelper.SetAttribute ("DataRate",StringValue (datarate));
+      }
       onOffHelper.SetAttribute ("PacketSize", UintegerValue (packet_size));
       onOffHelper.SetAttribute ("QosTid", UintegerValue (j + 2));
 
