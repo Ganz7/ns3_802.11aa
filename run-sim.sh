@@ -16,10 +16,9 @@ if [ $# -eq 4 ]
 		DURATION=$4
 fi
 
-WAFCMD="./waf --run \"examples/wireless/wifi-udp --nWifi=$NWIFI --type=$TYPE --rate=$RATE --duration=$DURATION\" > $NWIFI\_$TYPE\_$RATE\_$DURATION.dat"
-
 # Run the simulation code 25 times
 for i in `seq 1 25`;
 do 
+	WAFCMD="./waf --run \"examples/wireless/wifi-udp --nWifi=$NWIFI --type=$TYPE --rate=$RATE --duration=$DURATION\" > $NWIFI\_$TYPE\_$RATE\_$DURATION\_$i.dat"
 	eval $WAFCMD
 done
