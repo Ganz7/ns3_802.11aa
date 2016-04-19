@@ -6,8 +6,6 @@ NWIFI=5
 TYPE=true   # true for On/Off and false for Poisson
 RATE=30
 
-DURATION_ARRAY=( 0.001 0.005 0.01 0.05 0.1 0.5 1 )
-
 # Vary the duration values
 for DURATION in 0.001 0.005 0.01 0.05 0.1 0.5 1
 do
